@@ -1,0 +1,367 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PathFinder · 会说话、有情绪、懂你车的小圆屏</title>
+<style>
+:root{
+  --ink-deep:#0A1424;
+  --ink-panel:#101E33;
+  --ink-raise:#16283F;
+  --line:#23364F;
+  --text:#EAF2FB;
+  --mut:#8FA6BF;
+  --dim:#5A7089;
+  --acc:#4FC3F7;
+  --acc2:#FFB454;
+  --disp:"Bahnschrift","Segoe UI",Arial,sans-serif;
+  --body:"Microsoft YaHei","PingFang SC",sans-serif;
+}
+*{margin:0;padding:0;box-sizing:border-box}
+html{scroll-behavior:smooth}
+body{background:var(--ink-deep);color:var(--text);font-family:var(--body);line-height:1.75;-webkit-font-smoothing:antialiased}
+.wrap{max-width:1120px;margin:0 auto;padding:0 28px}
+
+/* ---------- 通用 ---------- */
+.eyebrow{font-family:var(--disp);font-size:12px;letter-spacing:.38em;text-transform:uppercase;color:var(--dim);display:flex;align-items:center;gap:12px}
+.eyebrow::before{content:"";width:9px;height:9px;border-radius:50%;border:2px solid var(--acc);flex:none}
+h2{font-size:clamp(26px,3.4vw,32px);font-weight:700;letter-spacing:.02em;margin:14px 0 10px}
+.sec-sub{color:var(--mut);font-size:15.5px;max-width:640px}
+section{padding:88px 0}
+.rv{opacity:0;transform:translateY(16px);transition:opacity .55s ease,transform .55s ease}
+.rv.on{opacity:1;transform:none}
+:focus-visible{outline:2px solid var(--acc);outline-offset:3px;border-radius:4px}
+
+/* ---------- Hero ---------- */
+.hero{padding:64px 0 96px}
+.hero-grid{display:grid;grid-template-columns:1.02fr .98fr;gap:56px;align-items:center}
+.hero h1{font-size:clamp(34px,4.6vw,50px);line-height:1.28;font-weight:700;letter-spacing:.01em;margin:22px 0 18px}
+.hero h1 em{font-style:normal;color:var(--acc)}
+.lede{color:var(--mut);font-size:17px;max-width:520px;margin-bottom:26px}
+.chips{display:flex;flex-wrap:wrap;gap:10px}
+.chip{border:1px solid var(--line);background:var(--ink-panel);color:var(--acc);font-size:13.5px;padding:7px 18px;border-radius:999px}
+
+/* 圆屏设备 */
+.device{display:flex;flex-direction:column;align-items:center;gap:22px}
+.dial{--live:var(--acc);position:relative;width:min(400px,76vw);aspect-ratio:1;border-radius:50%;
+  background:radial-gradient(circle at 35% 28%,#1C3253 0%,#0E1B2F 56%,#0A1526 100%);
+  box-shadow:0 0 0 1px #2A3F5C,0 0 0 12px #0D1828,0 0 0 13px #2A3F5C,0 34px 90px rgba(0,0,0,.55),0 0 110px rgba(79,195,247,.10);
+  transition:box-shadow .6s ease}
+body[data-mode="sport"] .dial{--live:var(--acc2);box-shadow:0 0 0 1px #2A3F5C,0 0 0 12px #0D1828,0 0 0 13px #2A3F5C,0 34px 90px rgba(0,0,0,.55),0 0 110px rgba(255,180,84,.12)}
+.dial::after{content:"";position:absolute;inset:0;border-radius:50%;pointer-events:none;
+  background:radial-gradient(circle at 32% 24%,rgba(255,255,255,.09),transparent 44%)}
+.ticks{position:absolute;inset:7%;border-radius:50%;opacity:.95;
+  background:
+    repeating-conic-gradient(from -120deg,var(--live) 0deg .7deg,transparent .7deg 10deg),
+    repeating-conic-gradient(from -120deg,#33496A 0deg 1.6deg,transparent 1.6deg 60deg);
+  -webkit-mask:radial-gradient(circle,transparent 60%,#000 61% 76%,transparent 77%);
+  mask:radial-gradient(circle,transparent 60%,#000 61% 76%,transparent 77%);
+  transition:background .5s ease}
+.needle{position:absolute;left:calc(50% - 2px);bottom:50%;width:4px;height:36%;border-radius:4px;
+  background:linear-gradient(to top,var(--live),rgba(255,255,255,.85));
+  transform-origin:50% 100%;animation:sweep-eco 6.5s ease-in-out infinite;
+  box-shadow:0 0 10px rgba(79,195,247,.55)}
+body[data-mode="sport"] .needle{animation:sweep-sport 2.4s ease-in-out infinite;box-shadow:0 0 12px rgba(255,180,84,.6)}
+@keyframes sweep-eco{0%,100%{transform:rotate(-28deg)}50%{transform:rotate(14deg)}}
+@keyframes sweep-sport{0%,100%{transform:rotate(38deg)}42%{transform:rotate(72deg)}52%{transform:rotate(56deg)}62%{transform:rotate(74deg)}}
+.hub{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);width:27%;aspect-ratio:1;border-radius:50%;
+  background:#0C1930;border:1px solid var(--line);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:9%}
+.eyes{display:flex;gap:14%}
+.eye{width:8px;height:11px;border-radius:5px;background:var(--live);animation:blink 4.6s infinite}
+@keyframes blink{0%,91%,96%,100%{transform:scaleY(1)}93.5%{transform:scaleY(.08)}}
+.mouth-eco{width:30%;height:3px;border-radius:3px;background:var(--live)}
+.mouth-sport{display:none;width:22%;height:13%;border-radius:50%;background:var(--live)}
+body[data-mode="sport"] .mouth-eco{display:none}
+body[data-mode="sport"] .mouth-sport{display:block}
+.readout{position:absolute;left:0;right:0;top:70%;text-align:center}
+.readout b{font-family:var(--disp);font-weight:600;font-size:15px;letter-spacing:.3em;color:var(--live)}
+.readout span{display:block;font-size:11px;color:var(--dim);letter-spacing:.2em;margin-top:5px}
+
+/* 模式切换 */
+.seg{display:flex;border:1px solid var(--line);border-radius:999px;overflow:hidden;background:var(--ink-panel)}
+.seg button{appearance:none;border:0;background:transparent;color:var(--mut);font-family:var(--body);font-size:14px;
+  padding:9px 24px;cursor:pointer;transition:background .25s,color .25s}
+.seg button[aria-pressed="true"]{background:var(--ink-raise);color:var(--text)}
+.seg button:first-child[aria-pressed="true"]{color:var(--acc)}
+.seg button:last-child[aria-pressed="true"]{color:var(--acc2)}
+.seg-label{font-size:12.5px;color:var(--dim)}
+
+/* ---------- 能力卡 ---------- */
+.cards{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:40px}
+.card{background:var(--ink-panel);border:1px solid var(--line);border-radius:16px;padding:28px 30px;
+  transition:transform .3s ease,border-color .3s ease}
+.card:hover{transform:translateY(-3px);border-color:#33496A}
+.card .tag{font-family:var(--disp);font-size:11.5px;letter-spacing:.35em;color:var(--dim)}
+.card h3{font-size:21px;margin:12px 0 8px}
+.card p{color:var(--mut);font-size:14.5px}
+.viz{margin-top:20px}
+
+/* 卡内：对话 */
+.bub{max-width:82%;padding:9px 16px;border-radius:14px;font-size:13.5px;line-height:1.6}
+.bub.you{margin-left:auto;background:rgba(79,195,247,.13);color:var(--text);border-bottom-right-radius:4px}
+.bub.it{margin-top:10px;background:var(--ink-raise);color:var(--mut);border-bottom-left-radius:4px}
+
+/* 卡内：声纹波形 */
+.wave{display:flex;align-items:flex-end;gap:5px;height:44px}
+.wave i{width:5px;border-radius:3px;background:var(--acc);height:calc(var(--h) * 1px);
+  animation:wv 1.15s ease-in-out calc(var(--d) * 1s) infinite;opacity:.9}
+@keyframes wv{0%,100%{transform:scaleY(.35)}50%{transform:scaleY(1)}}
+.mem-chips{display:flex;gap:8px;flex-wrap:wrap;margin-top:14px}
+.mem-chips span{font-size:12px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:4px 13px}
+
+/* 卡内：OBD 数据条 */
+.obd-row{display:grid;grid-template-columns:88px 1fr 52px;align-items:center;gap:12px;margin-top:10px;font-size:13px}
+.obd-row label{color:var(--dim)}
+.obd-row b{font-family:var(--disp);font-weight:600;color:var(--text);text-align:right;letter-spacing:.05em}
+.track{height:8px;border-radius:99px;background:#0C1930;overflow:hidden}
+.fill{height:100%;border-radius:99px;background:var(--acc);width:calc(var(--w) * 1%)}
+
+/* 卡内：仪表环 */
+.rings{display:flex;gap:14px;align-items:center;margin-top:18px;flex-wrap:wrap}
+.ring{width:44px;height:44px;border-radius:50%;border:2px solid #2E4468;display:grid;place-items:center}
+.ring::before{content:"";width:12px;height:12px;border-radius:50%;background:var(--acc);opacity:.85}
+.ring.more{border-style:dashed;border-color:var(--line)}
+.ring.more::before{display:none}
+.rings em{font-style:normal;font-size:13px;color:var(--dim)}
+
+/* ---------- 时间轴 ---------- */
+.tl{display:grid;grid-template-columns:repeat(4,1fr);gap:26px;margin-top:44px;position:relative}
+.tl::before{content:"";position:absolute;top:5px;left:0;right:0;height:1px;background:var(--line)}
+.tl-item{position:relative;padding-top:30px}
+.tl-item::before{content:"";position:absolute;top:0;left:0;width:11px;height:11px;border-radius:50%;
+  border:2px solid var(--acc);background:var(--ink-deep)}
+.tl time{font-family:var(--disp);font-size:15px;letter-spacing:.18em;color:var(--acc)}
+.tl h4{font-size:17px;margin:7px 0 6px}
+.tl p{font-size:13.5px;color:var(--mut)}
+.tl-note{margin-top:36px;text-align:center;color:var(--acc2);font-size:15px}
+
+/* ---------- 系统与规格 ---------- */
+.sys-grid{display:grid;grid-template-columns:1fr 1fr;gap:22px;margin-top:40px}
+.sys-card{background:var(--ink-panel);border:1px solid var(--line);border-radius:16px;padding:26px 30px}
+.sys-card h4{font-size:18px;margin-bottom:12px}
+.sys-card li{list-style:none;color:var(--mut);font-size:14.5px;padding:7px 0;border-top:1px solid rgba(35,54,79,.55)}
+.sys-card li:first-of-type{border-top:0}
+.specs{margin-top:22px;border-top:1px solid var(--line)}
+.spec{display:grid;grid-template-columns:110px 1fr;gap:14px;padding:13px 4px;border-bottom:1px solid var(--line);font-size:14.5px}
+.spec dt{color:var(--dim)}
+.spec dd{color:var(--text)}
+
+/* ---------- 结尾 ---------- */
+.closing{text-align:center;padding:120px 0 60px}
+.closing .ring-hero{width:64px;height:64px;border-radius:50%;border:2px solid #2E4468;margin:0 auto 30px;position:relative}
+.closing .ring-hero::before{content:"";position:absolute;inset:18px;border-radius:50%;background:var(--acc2)}
+.closing h2{font-size:clamp(36px,5vw,52px);margin:0 0 14px}
+.closing .sub{color:var(--mut);font-size:16px}
+footer{padding:34px 0 46px;border-top:1px solid var(--line)}
+footer p{font-size:12.5px;color:var(--dim);text-align:center}
+
+/* ---------- 响应式 ---------- */
+@media (max-width:920px){
+  .hero-grid{grid-template-columns:1fr;gap:44px}
+  .cards{grid-template-columns:1fr}
+  .sys-grid{grid-template-columns:1fr}
+  .tl{grid-template-columns:1fr;gap:0}
+  .tl::before{top:0;bottom:0;left:5px;right:auto;width:1px;height:auto}
+  .tl-item{padding:0 0 30px 30px}
+  .tl-item::before{top:6px}
+  section{padding:64px 0}
+}
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{animation:none!important;transition:none!important}
+  .rv{opacity:1;transform:none}
+}
+</style>
+</head>
+<body data-mode="eco">
+
+<!-- Hero -->
+<header class="hero">
+  <div class="wrap hero-grid">
+    <div>
+      <p class="eyebrow">PathFinder · 智能车载伴侣</p>
+      <h1>会说话、有情绪、<br>懂你车的<em>小圆屏</em></h1>
+      <p class="lede">语音助手、车辆感知和智能仪表，装进一块 1.46 英寸圆屏。不抢你的手机，只做副驾上最懂你的那一个。</p>
+      <div class="chips">
+        <span class="chip">语音对话</span><span class="chip">声纹记忆</span>
+        <span class="chip">车况感知</span><span class="chip">智能仪表</span>
+      </div>
+    </div>
+    <div class="device">
+      <div class="dial" role="img" aria-label="PathFinder 圆形屏幕示意：刻度盘、摆针与表情">
+        <div class="ticks"></div>
+        <div class="needle"></div>
+        <div class="hub">
+          <div class="eyes"><i class="eye"></i><i class="eye"></i></div>
+          <div class="mouth-eco"></div>
+          <div class="mouth-sport"></div>
+        </div>
+        <div class="readout">
+          <b id="modeWord">ECO · 从容</b>
+          <span>驾驶风格 · 表情联动</span>
+        </div>
+      </div>
+      <p class="seg-label">点一下，看看它怎么反应</p>
+      <div class="seg" role="group" aria-label="驾驶状态切换">
+        <button type="button" data-m="eco" aria-pressed="true">ECO · 从容</button>
+        <button type="button" data-m="sport" aria-pressed="false">SPORT · 兴奋</button>
+      </div>
+    </div>
+  </div>
+</header>
+
+<!-- 能力 -->
+<section>
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow">它能做什么</p>
+      <h2>一台放在车里的智能伴侣设备</h2>
+      <p class="sec-sub">听得懂、记得住、有反应——四件事，一块圆屏全包了。</p>
+    </div>
+    <div class="cards">
+      <div class="card rv">
+        <p class="tag">VOICE</p>
+        <h3>大声说，随便插话</h3>
+        <p>喊醒即说，随时打断；识别、思考、回答像聊天一样自然，云端大模型实时应答。</p>
+        <div class="viz">
+          <div class="bub you">明天要去杭州，帮我看看穿什么合适？</div>
+          <div class="bub it">白天 22 度有小雨，建议薄外套，记得带伞——</div>
+        </div>
+      </div>
+      <div class="card rv">
+        <p class="tag">MEMORY</p>
+        <h3>它记得你是谁</h3>
+        <p>听声辨人，不同的人不同的记忆；不用登录，不用切账号，下次上车接着上次聊。</p>
+        <div class="viz">
+          <div class="wave" aria-hidden="true">
+            <i style="--h:20;--d:0"></i><i style="--h:34;--d:.08"></i><i style="--h:14;--d:.16"></i>
+            <i style="--h:40;--d:.24"></i><i style="--h:26;--d:.32"></i><i style="--h:44;--d:.40"></i>
+            <i style="--h:18;--d:.48"></i><i style="--h:38;--d:.56"></i><i style="--h:24;--d:.64"></i>
+            <i style="--h:42;--d:.72"></i><i style="--h:16;--d:.80"></i><i style="--h:30;--d:.88"></i>
+            <i style="--h:22;--d:.96"></i><i style="--h:36;--d:1.04"></i>
+          </div>
+          <div class="mem-chips"><span>咖啡不加糖</span><span>爱听民谣</span><span>周日去了海边</span></div>
+        </div>
+      </div>
+      <div class="card rv">
+        <p class="tag">OBD</p>
+        <h3>你的驾驶，它看得见</h3>
+        <p>直连车辆 OBD-II，车速、转速、油门实时读取。平稳驾驶它安静欣慰，深踩油门它兴奋起来。</p>
+        <div class="viz">
+          <div class="obd-row"><label>车速</label><div class="track"><div class="fill" style="--w:72"></div></div><b>86</b></div>
+          <div class="obd-row"><label>转速</label><div class="track"><div class="fill" style="--w:58"></div></div><b>3100</b></div>
+          <div class="obd-row"><label>油门开度</label><div class="track"><div class="fill" style="--w:80"></div></div><b>72%</b></div>
+        </div>
+      </div>
+      <div class="card rv">
+        <p class="tag">GAUGES</p>
+        <h3>一块圆屏，多种仪表</h3>
+        <p>坡度仪、航空姿态仪、G 力、偏航角速度……滑动切换，长按一秒校准零位，动态表情随驾驶与对话变化。</p>
+        <div class="viz rings" aria-label="八个仪表页面">
+          <div class="ring" title="坡度仪"></div><div class="ring" title="姿态仪"></div>
+          <div class="ring" title="G 力"></div><div class="ring" title="偏航角速度"></div>
+          <em>+ 环境问答</em>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- 场景 -->
+<section>
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow">使用场景</p>
+      <h2>一个早晨</h2>
+      <p class="sec-sub">从出门到熄火，它一直在。</p>
+    </div>
+    <div class="tl">
+      <div class="tl-item rv"><time>07:40</time><h4>出门前</h4><p>随口问天气，它提醒今天带伞。</p></div>
+      <div class="tl-item rv"><time>07:52</time><h4>上坡道</h4><p>坡度仪实时显示当前坡度。</p></div>
+      <div class="tl-item rv"><time>08:10</time><h4>等红灯</h4><p>聊两句昨天的比赛，它记得你也看了。</p></div>
+      <div class="tl-item rv"><time>08:30</time><h4>到达</h4><p>熄火道别，它安静下来，等明天。</p></div>
+    </div>
+    <p class="tl-note rv">全程无需低头找手机，眼睛留在路上。</p>
+  </div>
+</section>
+
+<!-- 系统与规格 -->
+<section>
+  <div class="wrap">
+    <div class="rv">
+      <p class="eyebrow">系统与规格</p>
+      <h2>小圆屏背后，是一整套云智能</h2>
+    </div>
+    <div class="sys-grid">
+      <div class="sys-card rv">
+        <h4>设备端</h4>
+        <ul>
+          <li>ESP32-S3R8 固件 · LVGL 触摸交互</li>
+          <li>麦克风采集 · 扬声器播报</li>
+          <li>六轴 IMU · CAN 收发</li>
+        </ul>
+      </div>
+      <div class="sys-card rv">
+        <h4>云端</h4>
+        <ul>
+          <li>大模型对话 · 实时语音识别与合成</li>
+          <li>声纹库 · 跨会话记忆管理</li>
+          <li>Web 管理面板 · 会话回放与诊断</li>
+        </ul>
+      </div>
+    </div>
+    <dl class="specs rv">
+      <div class="spec"><dt>屏幕</dt><dd>1.46 英寸圆形触摸屏 · 412 × 412</dd></div>
+      <div class="spec"><dt>主控</dt><dd>ESP32-S3R8</dd></div>
+      <div class="spec"><dt>传感</dt><dd>六轴 IMU QMI8658 · 250Hz</dd></div>
+      <div class="spec"><dt>车辆接口</dt><dd>OBD-II · 直连 CAN 总线</dd></div>
+      <div class="spec"><dt>连接</dt><dd>WiFi · 蓝牙</dd></div>
+      <div class="spec"><dt>云端</dt><dd>大模型 · 实时语音 · 记忆 · 管理面板</dd></div>
+    </dl>
+  </div>
+</section>
+
+<!-- 结尾 -->
+<section class="closing">
+  <div class="wrap rv">
+    <div class="ring-hero" aria-hidden="true"></div>
+    <h2>路上见。</h2>
+    <p class="sub">PathFinder · 开发者预览 · 持续打磨中</p>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    <p>本项目处于开发验证阶段，不作为安全关键驾驶设备；行驶中请以道路实际情况为准。 © 2026 PathFinder</p>
+  </div>
+</footer>
+
+<script>
+(function(){
+  var body = document.body;
+  var word = document.getElementById('modeWord');
+  document.querySelectorAll('.seg button').forEach(function(b){
+    b.addEventListener('click', function(){
+      body.dataset.mode = b.dataset.m;
+      word.textContent = b.dataset.m === 'sport' ? 'SPORT · 兴奋' : 'ECO · 从容';
+      document.querySelectorAll('.seg button').forEach(function(x){
+        x.setAttribute('aria-pressed', x === b ? 'true' : 'false');
+      });
+    });
+  });
+  var rm = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var els = document.querySelectorAll('.rv');
+  if (rm || !('IntersectionObserver' in window)) {
+    els.forEach(function(el){ el.classList.add('on'); });
+    return;
+  }
+  var io = new IntersectionObserver(function(entries){
+    entries.forEach(function(e){
+      if (e.isIntersecting) { e.target.classList.add('on'); io.unobserve(e.target); }
+    });
+  }, {threshold: .15});
+  els.forEach(function(el){ io.observe(el); });
+})();
+</script>
+</body>
+</html>
